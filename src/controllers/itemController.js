@@ -2,16 +2,27 @@ import User from "../models/User.js";
 import item from "../models/ItemsPresente.js";
 
 class ItemController {
-  // Método existente para listar itens
+  // Método para listar itens
   static async listarItem(req, res) {
-    const itemList = await item.find({});
-    res.status(200).json(itemList);
+    try {
+      const itemList = await item.find({});
+      res.status(200).json(itemList);
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao listar itens" });
+    }
   }
 
   // Método para selecionar um item e associá-lo a um usuário
   static async selecionarItem(req, res) {
     try {
       const { nome, itemId, quantidade } = req.body;
+      const quantidadeNumerica = Number(quantidade);
+
+      if (isNaN(quantidadeNumerica)) {
+        return res.status(400).json({ error: "Quantidade inválida" });
+      }
+
+      console.log("Requisição recebida:", req.body);
 
       // Verifica se o item existe
       const itemSelecionado = await item.findById(itemId);
@@ -20,7 +31,7 @@ class ItemController {
       }
 
       // Verifica se a quantidade selecionada é válida
-      if (quantidade <= 0 || quantidade > itemSelecionado.quantidade) {
+      if (quantidadeNumerica <= 0 || quantidadeNumerica > itemSelecionado.quantidade) {
         return res.status(400).json({ error: "Quantidade inválida" });
       }
 
@@ -28,11 +39,11 @@ class ItemController {
       const novoUsuario = new User({
         nome,
         itemSelecionado: itemId,
-        quantidade: quantidade,
+        quantidade: quantidadeNumerica,
       });
 
       // Atualiza a quantidade disponível do item no banco de dados
-      itemSelecionado.quantidade -= quantidade;
+      itemSelecionado.quantidade -= quantidadeNumerica;
 
       // Verifica se o item ainda está disponível
       if (itemSelecionado.quantidade === 0) {
@@ -47,6 +58,7 @@ class ItemController {
         usuario: novoUsuario,
       });
     } catch (error) {
+      console.error("Erro ao selecionar item:", error);
       res.status(500).json({ error: "Erro ao selecionar item" });
     }
   }
